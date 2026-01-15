@@ -13,4 +13,5 @@ node_modules/
 # Environment variables
 .env
 
+# Misc
 .txt
