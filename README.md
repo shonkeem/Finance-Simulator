@@ -1,0 +1,2 @@
+finance simulator
+FastAPI, React
