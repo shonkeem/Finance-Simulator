@@ -1,12 +1,26 @@
 from fastapi import FastAPI, Request, Body
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Any
 from datetime import datetime, timezone
 from pydantic import BaseModel
 
 app = FastAPI()
 
+origins = [
+    "http://localhost:5173"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class Input(BaseModel):
     name: str
+    age:int
     income: int
     expenses: int
 
@@ -22,4 +36,5 @@ def echo(payload: Any = Body(default={})):
 
 @app.post("/simulate")
 def simulate(payload: Input):
-    return payload
+    stamp = datetime.now(timezone.utc).isoformat()
+    return {"payload": payload, "timestamp_utc": stamp}
