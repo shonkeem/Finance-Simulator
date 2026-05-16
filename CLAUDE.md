@@ -47,30 +47,33 @@ The simulation tracks these state variables at each timestep:
 
 ## Current Build State
 
-*Last updated: 2026-03-19*
+*Last updated: 2026-03-21*
 
 ### Exists now
 - Final directory structure in place: `api/`, `src/simulation/models/`, `src/simulation/engine/`, `frontend/`, `tests/simulation/`, `framing.json`, `loads.json`, `settings.json`
 - Frontend form (`frontend/src/App.tsx`) — TypeScript errors resolved, `MyForm` extracted to module level, correct event types and error narrowing
 - `.gitignore` updated — `.venv/` replacing old `my_venv/` entry
-- `backend/` deleted — venv to be recreated at project root as `.venv/`
+- `backend/` deleted — venv recreated at project root as `.venv/`
 - `/shutdown` skill — `.claude/skills/shutdown/SKILL.md` working and verified
 - `docs/PRD.md` — full product requirements document with phased roadmap, ADRs, schemas, acceptance criteria
-- All source files under `src/simulation/` and `api/` currently empty (scaffolding only)
+- `framing.json` — filled with 10-year scenario (2025-01-01 → 2034-12-01, monthly)
+- `loads.json` — filled with income, expenses, debts, investments
+- `settings.json` — filled with inflation, tax, debt strategy, starting cash
+- `src/simulation/models/inputs.py` — `FramingInput`, `IncomeLoad`, `ExpenseLoad`, `DebtLoad`, `InvestmentLoad`, `SettingsInput`, `LoadsInput` with field and model validators
+- `src/simulation/models/state.py` — `SimulationState` frozen dataclass with `net_worth` property
+- `src/simulation/engine/build_initial_state.py` — scaffolded with type bug (investments/debt must be `dict[str, float]`, not summed floats)
+- `src/simulation/engine/core.py` — scaffolded with bugs (broken imports, broken `advance_one_month`, `load` vs `loads` in applicator calls)
+- `src/simulation/engine/apply_income.py`, `apply_expense.py`, `apply_debt.py`, `apply_investment.py` — created but not yet reviewed
 
 ### Does NOT exist yet
-- Content in `framing.json`, `loads.json`, `settings.json` (schemas not yet defined)
-- Pydantic input models (`src/simulation/models/inputs.py`)
-- `SimulationState` dataclass (`src/simulation/models/state.py`)
-- Simulation engine (core loop, load applicators)
-- API endpoints (`api/main.py`)
-- Tests
+- `api/main.py` content (empty)
+- Tests (`pytest` not installed; no test files written)
 - Frontend visualization components
-- `.venv/` at project root (needs `python -m venv .venv`)
 - `npm install` not yet run in `frontend/` (node_modules missing)
+- `pytest`, `ruff` not installed in `.venv/`
 
 ### Next step
-Run `npm install` in `frontend/` and `python -m venv .venv && source .venv/bin/activate && pip install fastapi pydantic uvicorn` at project root to get the dev environment operational. Then define `framing.json` schema — fill in the empty file with the schema specified in `docs/PRD.md` Section 7.
+Fix known bugs in `build_initial_state.py` (investments/debt as dicts) and `core.py` (imports, `advance_one_month`, load vs loads). Then review and implement `apply_income.py` — the first real applicator — and write its unit test in `tests/simulation/test_apply_income.py`.
 
 ## Do Not Touch List
 

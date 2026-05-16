@@ -6,6 +6,8 @@ from simulation.engine.apply_expense import apply_expense
 from simulation.engine.apply_income import apply_income
 from simulation.engine.apply_investment import apply_investment
 from datetime import date
+from dataclasses import replace
+
 
 def advance_one_month(current_date: date):
     if current_date.month == 12:
@@ -33,6 +35,8 @@ def run_simulation(
 
         if framing.time_step == TimeStep.monthly:
             current_date = advance_one_month(current_date)
+            state = replace(state, date=current_date)
+
         timeline.append(state)
 
     return timeline

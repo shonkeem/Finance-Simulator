@@ -156,9 +156,9 @@ class LoadsInput(BaseModel):
     
 # SETTINGS
 class DebtStrategies(str, Enum):
-    minimum_only = "minimum_only"
-    avalanche = "avalanche"
-    snowball = "snowball"
+    MINIMUM_ONLU = "minimum_only"
+    AVALANCHE = "avalanche"
+    SNOWBALL = "snowball"
 
 class SettingsInput(BaseModel):
     inflation_rate: float
