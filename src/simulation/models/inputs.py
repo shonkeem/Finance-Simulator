@@ -156,17 +156,17 @@ class LoadsInput(BaseModel):
     
 # SETTINGS
 class DebtStrategies(str, Enum):
-    MINIMUM_ONLU = "minimum_only"
+    MINIMUM_ONLY = "minimum_only"
     AVALANCHE = "avalanche"
     SNOWBALL = "snowball"
 
 class SettingsInput(BaseModel):
-    inflation_rate: float
-    income_tax_rate: float
-    apply_income_tax: bool
-    apply_inflation_to_expenses: bool
-    debt_payoff_strategy: DebtStrategies
-    starting_cash: float
+    inflation_rate: float = 0.0
+    income_tax_rate: float = 0.0
+    apply_income_tax: bool = False
+    apply_inflation_to_expenses: bool = False
+    debt_payoff_strategy: DebtStrategies = DebtStrategies.SNOWBALL
+    starting_cash: float = 0.0
 
     @field_validator("income_tax_rate")
     @classmethod

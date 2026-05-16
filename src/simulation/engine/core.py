@@ -27,16 +27,17 @@ def run_simulation(
         for load in loads.income:
             state = apply_income(state, load, settings)
         for load in loads.expenses:
-            state = apply_expense(state, load, settings)
+            state = apply_expense(state, load, settings, framing.start_date)
         for load in loads.debts:
             state = apply_debt(state, load, settings)
         for load in loads.investments:
             state = apply_investment(state, load, settings)
 
+        timeline.append(state)
+
         if framing.time_step == TimeStep.monthly:
             current_date = advance_one_month(current_date)
             state = replace(state, date=current_date)
 
-        timeline.append(state)
 
     return timeline

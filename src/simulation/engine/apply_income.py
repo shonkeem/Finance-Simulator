@@ -17,6 +17,5 @@ def apply_income(state: SimulationState, load: IncomeLoad, settings: SettingsInp
     net = monthly_gross * (1 - settings.income_tax_rate) if settings.apply_income_tax else monthly_gross
 
     new_balance = state.cash + net
-
-    print(new_balance, monthly_gross)
-    return replace(state, cash = new_balance, income = monthly_gross)
+    new_income = state.income + monthly_gross
+    return replace(state, cash = new_balance, income=new_income)

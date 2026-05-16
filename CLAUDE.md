@@ -47,11 +47,11 @@ The simulation tracks these state variables at each timestep:
 
 ## Current Build State
 
-*Last updated: 2026-03-21*
+*Last updated: 2026-05-12*
 
 ### Exists now
 - Final directory structure in place: `api/`, `src/simulation/models/`, `src/simulation/engine/`, `frontend/`, `tests/simulation/`, `framing.json`, `loads.json`, `settings.json`
-- Frontend form (`frontend/src/App.tsx`) — TypeScript errors resolved, `MyForm` extracted to module level, correct event types and error narrowing
+- Frontend form (`frontend/src/App.tsx`) — TypeScript errors resolved, `MyForm` extracted to module level, correct event types and error narrowing. `node_modules` installed.
 - `.gitignore` updated — `.venv/` replacing old `my_venv/` entry
 - `backend/` deleted — venv recreated at project root as `.venv/`
 - `/shutdown` skill — `.claude/skills/shutdown/SKILL.md` working and verified
@@ -61,19 +61,26 @@ The simulation tracks these state variables at each timestep:
 - `settings.json` — filled with inflation, tax, debt strategy, starting cash
 - `src/simulation/models/inputs.py` — `FramingInput`, `IncomeLoad`, `ExpenseLoad`, `DebtLoad`, `InvestmentLoad`, `SettingsInput`, `LoadsInput` with field and model validators
 - `src/simulation/models/state.py` — `SimulationState` frozen dataclass with `net_worth` property
-- `src/simulation/engine/build_initial_state.py` — scaffolded with type bug (investments/debt must be `dict[str, float]`, not summed floats)
-- `src/simulation/engine/core.py` — scaffolded with bugs (broken imports, broken `advance_one_month`, `load` vs `loads` in applicator calls)
-- `src/simulation/engine/apply_income.py`, `apply_expense.py`, `apply_debt.py`, `apply_investment.py` — created but not yet reviewed
+- `src/simulation/engine/build_initial_state.py` — complete and correct: investments/debt as `dict[str, float]` keyed by load name
+- `src/simulation/engine/core.py` — correct imports, `advance_one_month`, field names. **Known bug: `state.date` is never updated in the loop — `current_date` advances but the state object's date stays at initial value**
+- `src/simulation/engine/apply_income.py` — implemented: date gating, compound annual growth (`monthly_gross * (1 + rate) ** years_elapsed`), tax applied via `settings`, returns new state via `dataclasses.replace`
+- `tests/simulation/test_apply_income.py` — 4 passing tests: no-tax, tax applied, inactive date, growth after 12 months
+- `conftest.py` — at project root, adds `src/` to `sys.path` for pytest imports
+- `pytest 9.0.3` — installed in `.venv`
 
 ### Does NOT exist yet
 - `api/main.py` content (empty)
-- Tests (`pytest` not installed; no test files written)
+- `apply_expense.py`, `apply_debt.py`, `apply_investment.py` — still empty stubs; no tests written
+- Core loop integration test
 - Frontend visualization components
-- `npm install` not yet run in `frontend/` (node_modules missing)
-- `pytest`, `ruff` not installed in `.venv/`
+- `ruff` not installed in `.venv/`
 
 ### Next step
-Fix known bugs in `build_initial_state.py` (investments/debt as dicts) and `core.py` (imports, `advance_one_month`, load vs loads). Then review and implement `apply_income.py` — the first real applicator — and write its unit test in `tests/simulation/test_apply_income.py`.
+1. Fix `core.py`: update `state.date` inside the loop using `dataclasses.replace` after `advance_one_month`
+2. Implement and test `apply_expense.py` (inflation logic via `settings.apply_inflation_to_expenses`)
+3. Implement and test `apply_debt.py` (interest accrual, payment, balance floor at 0)
+4. Implement and test `apply_investment.py` (contribution, employer match, monthly growth)
+5. Write core loop integration test: run N months, assert final state against hand calculation
 
 ## Do Not Touch List
 
