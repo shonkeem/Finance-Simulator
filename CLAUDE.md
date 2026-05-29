@@ -47,7 +47,7 @@ The simulation tracks these state variables at each timestep:
 
 ## Current Build State
 
-*Last updated: 2026-05-12*
+*Last updated: 2026-05-16*
 
 ### Exists now
 - Final directory structure in place: `api/`, `src/simulation/models/`, `src/simulation/engine/`, `frontend/`, `tests/simulation/`, `framing.json`, `loads.json`, `settings.json`
@@ -59,28 +59,27 @@ The simulation tracks these state variables at each timestep:
 - `framing.json` — filled with 10-year scenario (2025-01-01 → 2034-12-01, monthly)
 - `loads.json` — filled with income, expenses, debts, investments
 - `settings.json` — filled with inflation, tax, debt strategy, starting cash
-- `src/simulation/models/inputs.py` — `FramingInput`, `IncomeLoad`, `ExpenseLoad`, `DebtLoad`, `InvestmentLoad`, `SettingsInput`, `LoadsInput` with field and model validators
+- `src/simulation/models/inputs.py` — complete with defaults added to `SettingsInput` fields to allow partial instantiation in tests
 - `src/simulation/models/state.py` — `SimulationState` frozen dataclass with `net_worth` property
 - `src/simulation/engine/build_initial_state.py` — complete and correct: investments/debt as `dict[str, float]` keyed by load name
-- `src/simulation/engine/core.py` — correct imports, `advance_one_month`, field names. **Known bug: `state.date` is never updated in the loop — `current_date` advances but the state object's date stays at initial value**
-- `src/simulation/engine/apply_income.py` — implemented: date gating, compound annual growth (`monthly_gross * (1 + rate) ** years_elapsed`), tax applied via `settings`, returns new state via `dataclasses.replace`
-- `tests/simulation/test_apply_income.py` — 4 passing tests: no-tax, tax applied, inactive date, growth after 12 months
+- `src/simulation/engine/core.py` — complete: correct imports, `advance_one_month`, field names, `state.date` updated each loop via `dataclasses.replace`
+- `src/simulation/engine/apply_income.py` — implemented: date gating, compound annual growth, tax, accumulates into `state.income`, returns new state via `dataclasses.replace`
+- `src/simulation/engine/apply_expense.py` — implemented: inflation-linked scaling when both `load.inflation_linked` and `settings.apply_inflation_to_expenses` are true; takes `start_date` as extra arg; accumulates into `state.expenses`
+- `tests/simulation/test_apply_income.py` — 4 passing tests
+- `tests/simulation/test_apply_expense.py` — 2 passing tests
 - `conftest.py` — at project root, adds `src/` to `sys.path` for pytest imports
 - `pytest 9.0.3` — installed in `.venv`
 
 ### Does NOT exist yet
 - `api/main.py` content (empty)
-- `apply_expense.py`, `apply_debt.py`, `apply_investment.py` — still empty stubs; no tests written
+- `apply_debt.py` — empty stub; no tests
+- `apply_investment.py` — empty stub; no tests
 - Core loop integration test
 - Frontend visualization components
 - `ruff` not installed in `.venv/`
 
 ### Next step
-1. Fix `core.py`: update `state.date` inside the loop using `dataclasses.replace` after `advance_one_month`
-2. Implement and test `apply_expense.py` (inflation logic via `settings.apply_inflation_to_expenses`)
-3. Implement and test `apply_debt.py` (interest accrual, payment, balance floor at 0)
-4. Implement and test `apply_investment.py` (contribution, employer match, monthly growth)
-5. Write core loop integration test: run N months, assert final state against hand calculation
+Implement `apply_debt` in `src/simulation/engine/apply_debt.py`: accrue monthly interest (`balance * annual_rate / 12`), apply total payment (`minimum + extra`), floor balance at 0, update `state.debt[load.name]` and `state.cash`. Then write `tests/simulation/test_apply_debt.py` with: normal payment, balance hits zero, extra payment.
 
 ## Do Not Touch List
 

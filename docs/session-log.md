@@ -38,3 +38,25 @@
 - Fix `core.py`: correct imports, replace broken `advance_one_month` with proper date arithmetic, change `loads` → `load` in all applicator calls
 - Implement and test `apply_income.py` — write `tests/simulation/test_apply_income.py` first (normal case, inactive load, tax applied)
 ---
+
+## 2026-05-16
+### Done
+- Returned to project after extended break; performed full codebase audit and confirmed prior bugs in `build_initial_state.py` and `core.py` were already resolved in previous commits
+- Fixed `core.py`: `state.date` now updated each loop iteration via `dataclasses.replace` after `advance_one_month`
+- Implemented `apply_income.py`: date gating, compound annual growth, tax calculation, accumulates into `state.income` (fixed overwrite bug), returns new state via `dataclasses.replace`
+- Wrote `tests/simulation/test_apply_income.py`: 4 passing tests (no-tax, tax applied, inactive date, 1-year growth)
+- Implemented `apply_expense.py`: inflation-linked scaling, takes `start_date` argument, accumulates into `state.expenses`, correct cash deduction using inflated amount
+- Wrote `tests/simulation/test_apply_expense.py`: 2 passing tests (no inflation, inflation applied)
+- Added defaults to `SettingsInput` fields to allow partial instantiation in tests
+- Installed `pytest 9.0.3` into `.venv`; created `conftest.py` at project root
+
+### Status
+- Tests: 6 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 0 (working tree clean)
+
+### Next Session
+- Implement `apply_debt` in `src/simulation/engine/apply_debt.py`: accrue monthly interest (`balance * annual_rate / 12`), apply total payment (`minimum + extra`), floor balance at 0, update `state.debt[load.name]` and `state.cash`
+- Write `tests/simulation/test_apply_debt.py`: normal payment, balance reaches zero, extra payment case
+- After debt: implement and test `apply_investment.py` (contribution, employer match, monthly growth)
+---
