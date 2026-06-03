@@ -1,19 +1,19 @@
 from simulation.engine.apply_income import apply_income
 from simulation.models.state import SimulationState
 from datetime import date
-from simulation.models.inputs import IncomeLoad, SettingsInput, DebtStrategies
+from simulation.models.inputs import IncomeLoad, SettingsInput
 import pytest
 
 prev_state = SimulationState(date=date(2024, 1, 1), income=0, expenses=0)
 
 same_day_load = IncomeLoad(name="test income", monthly_gross=100, annual_growth_rate=.1, start_date=date(2024, 1, 1))
-tax_free_settings = SettingsInput(inflation_rate=0.01, starting_cash=0, income_tax_rate=.2, apply_income_tax=False, apply_inflation_to_expenses=True, debt_payoff_strategy=DebtStrategies.SNOWBALL)
+tax_free_settings = SettingsInput(inflation_rate=0.01, starting_cash=0, income_tax_rate=.2, apply_income_tax=False, apply_inflation_to_expenses=True)
 def test_same_day_no_tax():
     new_state = apply_income(prev_state, same_day_load, tax_free_settings)
     assert new_state.income == pytest.approx(100)
     assert new_state.cash == pytest.approx(100)
     
-taxed_settings = SettingsInput(inflation_rate=0.01, starting_cash=0, income_tax_rate=.2, apply_income_tax=True, apply_inflation_to_expenses=True, debt_payoff_strategy=DebtStrategies.SNOWBALL)
+taxed_settings = SettingsInput(inflation_rate=0.01, starting_cash=0, income_tax_rate=.2, apply_income_tax=True, apply_inflation_to_expenses=True)
 def test_same_day_tax():
     new_state = apply_income(prev_state, same_day_load, taxed_settings)
     assert new_state.income == pytest.approx(100)
