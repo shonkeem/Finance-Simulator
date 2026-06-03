@@ -60,3 +60,20 @@
 - Write `tests/simulation/test_apply_debt.py`: normal payment, balance reaches zero, extra payment case
 - After debt: implement and test `apply_investment.py` (contribution, employer match, monthly growth)
 ---
+
+## 2026-05-28
+### Done
+- Created `/startup` skill at `.claude/skills/startup/SKILL.md` — read-only start-of-session briefing: reads last session log, checks git state/tests/build, prints consolidated session brief with flags
+- Updated `.gitignore` with Claude-related file patterns
+- Committed all changes (CLAUDE.md, session-log.md, startup skill) as "restored claude files"
+
+### Status
+- Tests: 6 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 0 (working tree clean, 1 commit ahead of origin)
+
+### Next Session
+- Implement `apply_debt` in `src/simulation/engine/apply_debt.py`: accrue monthly interest (`balance * annual_rate / 12`), apply total payment (`minimum + extra`), floor balance at 0, update `state.debt[load.name]` and `state.cash`
+- Write `tests/simulation/test_apply_debt.py`: normal payment, balance reaches zero, extra payment case
+- After debt: implement and test `apply_investment.py` (contribution, employer match, monthly growth)
+---

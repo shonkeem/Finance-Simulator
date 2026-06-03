@@ -47,7 +47,7 @@ The simulation tracks these state variables at each timestep:
 
 ## Current Build State
 
-*Last updated: 2026-05-16*
+*Last updated: 2026-05-28*
 
 ### Exists now
 - Final directory structure in place: `api/`, `src/simulation/models/`, `src/simulation/engine/`, `frontend/`, `tests/simulation/`, `framing.json`, `loads.json`, `settings.json`
@@ -55,6 +55,7 @@ The simulation tracks these state variables at each timestep:
 - `.gitignore` updated — `.venv/` replacing old `my_venv/` entry
 - `backend/` deleted — venv recreated at project root as `.venv/`
 - `/shutdown` skill — `.claude/skills/shutdown/SKILL.md` working and verified
+- `/startup` skill — `.claude/skills/startup/SKILL.md` created and committed: reads session log, checks git/tests/build, prints consolidated session brief
 - `docs/PRD.md` — full product requirements document with phased roadmap, ADRs, schemas, acceptance criteria
 - `framing.json` — filled with 10-year scenario (2025-01-01 → 2034-12-01, monthly)
 - `loads.json` — filled with income, expenses, debts, investments
