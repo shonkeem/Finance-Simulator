@@ -35,12 +35,21 @@ class FramingInput(BaseModel):
 
 # LOADS
 
-class IncomeLoad(BaseModel):
+class DateBoundLoad(BaseModel):
+    start_date: date
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def end_after_start(self) -> "DateBoundLoad":
+        if self.end_date is not None and self.start_date >= self.end_date:
+            raise ValueError("end_date must be after start_date")
+        return self
+
+
+class IncomeLoad(DateBoundLoad):
     name: str
     monthly_gross: float
     annual_growth_rate: float
-    start_date: date
-    end_date: date | None = None
 
     @field_validator("monthly_gross")
     @classmethod
@@ -49,7 +58,7 @@ class IncomeLoad(BaseModel):
             raise ValueError("monthly_gross must be > 0")
         return v
     
-class ExpenseLoad(BaseModel):
+class ExpenseLoad(DateBoundLoad):
     name: str
     monthly_amount: float
     category: str
@@ -69,10 +78,10 @@ class ExpenseLoad(BaseModel):
             raise ValueError("category must be a non-empty string")
         return v
     
-class DebtLoad(BaseModel):
+class DebtLoad(DateBoundLoad):
     name: str
     current_balance: float
-    annual_rate: float
+    annual_interest_rate: float
     minimum_monthly_payment: float
     extra_monthly_payment: float
 
@@ -83,11 +92,11 @@ class DebtLoad(BaseModel):
             raise ValueError("must be > 0")
         return v
     
-    @field_validator("annual_rate")
+    @field_validator("annual_interest_rate")
     @classmethod
     def must_be_percentage(cls, v: float) -> float:
         if v < 0 or v > 1:
-            raise ValueError("annual_rate must be between 0 and 1")
+            raise ValueError("annual_interest_rate must be between 0 and 1")
         return v
     
     @field_validator("extra_monthly_payment")
@@ -97,14 +106,15 @@ class DebtLoad(BaseModel):
             raise ValueError("extra_monthly_payment must be >= 0")
         return v
     
-class InvestmentLoad(BaseModel):
+class InvestmentLoad(DateBoundLoad):
     name: str
     account_type: str
     current_balance: float
     monthly_contribution: float
-    employer_match_rate: float
-    employer_match_cap_pct_salary: float
-    assumed_annual_return: float
+    annual_return: float
+    # NOTE: to be implemented in future version
+    # employer_match_rate: float
+    # employer_match_cap_pct_salary: float
 
     @field_validator("current_balance", "monthly_contribution")
     @classmethod
@@ -113,12 +123,13 @@ class InvestmentLoad(BaseModel):
             raise ValueError("must be >= 0")
         return v
     
-    @field_validator("employer_match_rate", "employer_match_cap_pct_salary")
-    @classmethod
-    def must_be_percentage(cls, v: float) -> float:
-        if v < 0 or v > 1:
-            raise ValueError("must be between 0 and 1")
-        return v
+    # NOTE: to be implemented in future version
+    # @field_validator("employer_match_rate", "employer_match_cap_pct_salary")
+    # @classmethod
+    # def must_be_percentage(cls, v: float) -> float:
+    #     if v < 0 or v > 1:
+    #         raise ValueError("must be between 0 and 1")
+    #     return v
     
 class LoadsInput(BaseModel):
     income: list[IncomeLoad]
@@ -155,17 +166,20 @@ class LoadsInput(BaseModel):
         return self
     
 # SETTINGS
-class DebtStrategies(str, Enum):
-    MINIMUM_ONLY = "minimum_only"
-    AVALANCHE = "avalanche"
-    SNOWBALL = "snowball"
+
+# NOTE: Debt Strategies to be implemented in a future version
+# class DebtStrategies(str, Enum):
+#     MINIMUM_ONLY = "minimum_only"
+#     AVALANCHE = "avalanche"
+#     SNOWBALL = "snowball"
 
 class SettingsInput(BaseModel):
     inflation_rate: float = 0.0
     income_tax_rate: float = 0.0
     apply_income_tax: bool = False
     apply_inflation_to_expenses: bool = False
-    debt_payoff_strategy: DebtStrategies = DebtStrategies.SNOWBALL
+    # NOTE: Debt Strategies to be implemented in a future version
+    # debt_payoff_strategy: DebtStrategies = DebtStrategies.SNOWBALL
     starting_cash: float = 0.0
 
     @field_validator("income_tax_rate")

@@ -27,7 +27,7 @@ def run_simulation(
         for load in loads.income:
             state = apply_income(state, load, settings)
         for load in loads.expenses:
-            state = apply_expense(state, load, settings, framing.start_date)
+            state = apply_expense(state, load, settings)
         for load in loads.debts:
             state = apply_debt(state, load, settings)
         for load in loads.investments:
