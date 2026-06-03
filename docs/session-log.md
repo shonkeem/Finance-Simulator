@@ -77,3 +77,22 @@
 - Write `tests/simulation/test_apply_debt.py`: normal payment, balance reaches zero, extra payment case
 - After debt: implement and test `apply_investment.py` (contribution, employer match, monthly growth)
 ---
+
+## 2026-06-02
+### Done
+- Refactored `src/simulation/models/inputs.py`: added `DateBoundLoad(BaseModel)` base class with shared `end_after_start` model validator; all four load models now inherit from it, eliminating duplicated date fields and validation logic
+- Renamed `DebtLoad.annual_rate` → `annual_interest_rate` and simplified `InvestmentLoad` (`assumed_annual_return` → `annual_return`, employer match fields deferred)
+- Implemented `src/simulation/engine/apply_debt.py`: monthly interest accrual, total payment applied, balance floored at 0, cash deducted only for what was actually owed (handles payoff edge case correctly)
+- Updated `apply_expense.py` to use `load.start_date` directly (removed separate `start_date` argument)
+- Fixed both test files to match model changes: added `start_date` to `ExpenseLoad` fixtures, removed stale `DebtStrategies` references from income tests
+
+### Status
+- Tests: 6 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 0 (working tree clean)
+
+### Next Session
+- Write `tests/simulation/test_apply_debt.py` with three cases: normal payment, balance hits zero (cash floored), extra payment on top of minimum
+- Implement `apply_investment.py`: date gating, monthly contribution deducted from cash, monthly growth applied to balance, update `state.investments[load.name]` and `state.cash`
+- Write `tests/simulation/test_apply_investment.py` to match
+---
