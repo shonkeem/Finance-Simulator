@@ -96,3 +96,37 @@
 - Implement `apply_investment.py`: date gating, monthly contribution deducted from cash, monthly growth applied to balance, update `state.investments[load.name]` and `state.cash`
 - Write `tests/simulation/test_apply_investment.py` to match
 ---
+
+## 2026-06-03
+### Done
+- Fixed `debt` → `debts` field rename propagation: corrected `state.py` `net_worth` property, `apply_debt.py`, and `build_initial_state.py` which had all diverged from the renamed field
+- Wrote `tests/simulation/test_apply_debt.py`: 4 tests covering normal payment, balance floored at zero (cash deducted only for what was owed), extra payment on top of minimum, and inactive load date gating
+- Implemented and cleaned `apply_investment.py`: growth on pre-contribution balance, silent skip on insufficient cash (removed `print` side effect), added return type annotation
+- Wrote `tests/simulation/test_apply_investment.py`: 4 tests covering normal growth+contribution, zero starting balance, cash shortage skip, and inactive load
+- Wrote `tests/simulation/test_core.py`: 6 end-to-end integration tests covering timeline length, income+expense accumulation, debt paydown, investment growth, and determinism — core loop is now fully verified
+
+### Status
+- Tests: 20 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 0 (working tree clean)
+
+### Next Session
+- Implement `api/main.py`: single POST `/simulate` endpoint accepting `FramingInput`, `LoadsInput`, `SettingsInput` in the request body; calls `run_simulation`; returns timeline as list of response objects
+- Define `SimulationStateResponse` and `TimelineResponse` Pydantic models for the response shape — separate from the input models even if fields overlap
+- Write `tests/api/` endpoint tests: valid input returns 200 + correct shape, invalid input returns 422
+---
+
+## 2026-06-03 (addendum — documentation)
+### Done
+- Updated `docs/PRD.md` to v0.3: corrected field names (`annual_rate` → `annual_interest_rate`, `assumed_annual_return` → `annual_return`), fixed income/expense growth formulas, rewrote debt and investment applicator specs to match implementation, added ADR-006 (investment growth-before-contribution convention), marked Phase 1 items complete, resolved OQ-1/4/5/6/7/8/9 with actual decisions
+
+### Status
+- Tests: 20 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 3 (CLAUDE.md, docs/PRD.md, docs/session-log.md — documentation only)
+
+### Next Session
+- Implement `api/main.py`: single POST `/simulate` endpoint accepting `FramingInput`, `LoadsInput`, `SettingsInput` in the request body; calls `run_simulation`; returns timeline as list of response objects
+- Define `SimulationStateResponse` and `TimelineResponse` Pydantic models in `api/models.py` — separate from input models
+- Write `tests/api/test_simulate_endpoint.py`: 200 + correct shape on valid input, 422 on invalid input
+---

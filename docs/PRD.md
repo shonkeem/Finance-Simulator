@@ -1,7 +1,7 @@
 # FinanceSimulator — Product Requirements Document
 
-**Version:** 0.2
-**Date:** 2026-03-19
+**Version:** 0.3
+**Date:** 2026-06-03
 **Status:** Active
 
 ---
@@ -237,6 +237,18 @@ This order encodes financial priority: income → obligations → savings. Chang
 
 ---
 
+### ADR-006: Investment growth applies to pre-contribution balance
+
+**Decision:** Apply monthly growth to the balance before adding the monthly contribution, not after.
+
+**Rationale:** The existing balance has been compounding throughout the month. The new contribution arrives at month-end (dollar-cost averaging convention). Applying growth to the pre-contribution balance models this more accurately than the alternative, which would overstate returns on the new contribution.
+
+**Formula:** `new_balance = (old_balance * (1 + annual_return/12)) + monthly_contribution`
+
+**Consequence:** Tests assert this order explicitly. A one-line change in `apply_investment.py` would invert the behavior — the test locks it in.
+
+---
+
 ### ADR-005: No simulation logic in the API layer
 
 **Decision:** FastAPI routes contain zero financial computation. They receive, validate, delegate, and return.
@@ -299,9 +311,11 @@ This order encodes financial priority: income → obligations → savings. Chang
     {
       "name": "student_loans",
       "current_balance": 28000.00,
-      "annual_rate": 0.055,
+      "annual_interest_rate": 0.055,
       "minimum_monthly_payment": 295.00,
-      "extra_monthly_payment": 200.00
+      "extra_monthly_payment": 200.00,
+      "start_date": "2025-01-01",
+      "end_date": null
     }
   ],
   "investments": [
@@ -310,9 +324,9 @@ This order encodes financial priority: income → obligations → savings. Chang
       "account_type": "401k",
       "current_balance": 15000.00,
       "monthly_contribution": 500.00,
-      "employer_match_rate": 0.50,
-      "employer_match_cap_pct_salary": 0.06,
-      "assumed_annual_return": 0.07
+      "annual_return": 0.07,
+      "start_date": "2025-01-01",
+      "end_date": null
     }
   ]
 }
@@ -330,17 +344,19 @@ This order encodes financial priority: income → obligations → savings. Chang
 
 **Validation rules — Debts:**
 - `current_balance` > 0
-- `annual_rate` ∈ [0, 1]
+- `annual_interest_rate` ∈ [0, 1]
 - `minimum_monthly_payment` > 0
 - `extra_monthly_payment` ≥ 0
+- `start_date` and optional `end_date` — same rules as income
 - Names must be unique across all debt entries
 
 **Validation rules — Investments:**
 - `current_balance` ≥ 0
 - `monthly_contribution` ≥ 0
-- `employer_match_rate` ∈ [0, 1]
-- `employer_match_cap_pct_salary` ∈ [0, 1]
+- `annual_return` ∈ [0, 1]
+- `start_date` and optional `end_date` — same rules as income
 - Names must be unique across all investment entries
+- Employer match deferred to Phase 5 — fields not present in schema
 
 ---
 
@@ -378,55 +394,57 @@ For each income load active in the current period:
 
 1. Check `start_date ≤ period` and (`end_date is null` or `end_date ≥ period`)
 2. If inactive, skip
-3. Calculate months elapsed since `start_date`
-4. Apply growth: `effective_monthly = monthly_gross * (1 + annual_growth_rate/12)^months_elapsed`
+3. Calculate months elapsed since `start_date`; `years_elapsed = months_elapsed / 12`
+4. Apply growth: `effective_monthly = monthly_gross * (1 + annual_growth_rate)^years_elapsed`
 5. If `apply_income_tax`: `net_income = effective_monthly * (1 - income_tax_rate)`
-6. Add `net_income` to `state.cash` and `state.income_this_period`
+6. Add `net_income` to `state.cash`; add `effective_monthly` (gross) to `state.income`
 
 ### Expense Applicator
 
 For each expense load:
 
-1. Calculate months elapsed since simulation start
+1. Calculate months elapsed since `load.start_date`; `years_elapsed = months_elapsed / 12`
 2. If `inflation_linked` and `apply_inflation_to_expenses`:
-   `effective_amount = monthly_amount * (1 + inflation_rate/12)^months_elapsed`
+   `effective_amount = monthly_amount * (1 + inflation_rate)^years_elapsed`
 3. Else: `effective_amount = monthly_amount`
-4. Subtract `effective_amount` from `state.cash` and add to `state.expenses_this_period`
+4. Subtract `effective_amount` from `state.cash` and add to `state.expenses`
 
 ### Debt Payment Applicator
 
-**Step 1 — Accrue interest on all active debts:**
-```
-monthly_rate = annual_rate / 12
-interest_charge = current_balance * monthly_rate
-current_balance += interest_charge
-```
+For each active debt load (Phase 1 — per-load, no cross-debt strategy):
 
-**Step 2 — Apply minimum payments (all debts, regardless of strategy):**
 ```
-payment = min(minimum_monthly_payment, current_balance)
-current_balance -= payment
-state.cash -= payment
+monthly_interest = current_balance * (annual_interest_rate / 12)
+total_payment = minimum_monthly_payment + extra_monthly_payment
+new_balance = max(0, current_balance + monthly_interest - total_payment)
+actual_cash_deducted = min(total_payment, current_balance + monthly_interest)
+state.cash -= actual_cash_deducted
+state.debts[load.name] = new_balance
 ```
 
-**Step 3 — Apply extra payments per strategy:**
+The `actual_cash_deducted` guard handles the final period: when the remaining balance is less than the scheduled payment, only the true outstanding amount is deducted.
 
-Collect total extra budget: `total_extra = sum(d.extra_monthly_payment for d in active_debts)`
-
-- `minimum_only`: skip
-- `avalanche`: sort by `annual_rate` descending; apply total extra to first, cascade remainder
-- `snowball`: sort by `current_balance` ascending; same cascade logic
-
-When a debt reaches balance = 0, it is marked paid off and excluded from all future periods.
+**Debt strategy cascade (avalanche / snowball) is deferred to Phase 5.** In Phase 1, `extra_monthly_payment` is a fixed field on each debt load and is applied directly to that debt only.
 
 ### Investment Contribution Applicator
 
-For each investment load:
+For each active investment load:
 
-1. Deduct `monthly_contribution` from `state.cash`
-2. Calculate employer match: `match = min(monthly_contribution, monthly_gross * employer_match_cap_pct_salary) * employer_match_rate`
-3. Apply growth: `balance = (balance + monthly_contribution + match) * (1 + assumed_annual_return/12)`
-4. Update `state.investments[name]`
+```
+growth = current_balance * (annual_return / 12)      # growth on pre-contribution balance
+if monthly_contribution <= state.cash:
+    new_balance = current_balance + growth + monthly_contribution
+    state.cash -= monthly_contribution
+else:
+    new_balance = current_balance + growth             # skip contribution silently
+state.investments[load.name] = new_balance
+```
+
+**Growth applies to the pre-contribution balance.** This models the convention that the existing balance compounds throughout the month while the new contribution lands at month-end.
+
+**If cash is insufficient for the contribution, the contribution is skipped silently.** The balance still grows. No warning is emitted in Phase 1.
+
+**Employer match is deferred to Phase 5** — fields not present in Phase 1 schema.
 
 ### Derived Values
 
@@ -434,6 +452,7 @@ For each investment load:
 
 ```python
 net_worth = state.cash + sum(state.investments.values()) - sum(state.debts.values())
+# SimulationState field is `debts` (dict[str, float]), not `debt`
 ```
 
 Any discrepancy between stored and computed net worth is a defect.
@@ -694,21 +713,21 @@ frontend/src/utils/
 - [x] Shutdown command and session logging workflow
 - [x] CLAUDE.md fully specified
 
-### Phase 1 — Core Simulation Engine
+### Phase 1 — Core Simulation Engine ✅
 
 **Goal:** A pure Python function that produces a correct timeline from the three input files.
 **Exit criterion:** AC-1.1 through AC-1.7 pass. `pytest` green.
 
 Implementation order:
-1. Resolve all Open Questions (Section 15) — schema must be settled before any Python is written
-2. Write `src/simulation/models/inputs.py` — Pydantic models only
-3. Write `tests/simulation/models/test_inputs.py` — these pass before engine code is written
-4. Write `src/simulation/models/state.py` — `SimulationState` dataclass
-5. Write `apply_income` + `test_apply_income.py`
-6. Write `apply_expenses` + `test_apply_expenses.py`
-7. Write `apply_debt_payments` + `test_apply_debts.py`
-8. Write `apply_investment_contributions` + `test_apply_investments.py`
-9. Write `core.py` core loop + `test_core.py`
+1. ✅ Resolve Open Questions (Section 15) — schema settled
+2. ✅ Write `src/simulation/models/inputs.py` — Pydantic models with `DateBoundLoad` base class
+3. ⬜ Write `tests/simulation/models/test_inputs.py` — not yet written
+4. ✅ Write `src/simulation/models/state.py` — `SimulationState` frozen dataclass
+5. ✅ Write `apply_income` + `test_apply_income.py` (4 tests)
+6. ✅ Write `apply_expense` + `test_apply_expense.py` (2 tests)
+7. ✅ Write `apply_debt` + `test_apply_debt.py` (4 tests)
+8. ✅ Write `apply_investment` + `test_apply_investment.py` (4 tests)
+9. ✅ Write `core.py` core loop + `test_core.py` (6 integration tests, 20 total passing)
 
 ### Phase 2 — API Layer
 
@@ -783,7 +802,7 @@ Implementation order within this phase:
 |---|---|
 | Debt balance reaches zero mid-term | Mark paid off; stop applying payments |
 | Cash goes negative in a period | Clamp to 0; add warning to metadata; simulation continues |
-| Investment contribution exceeds available cash | Contribute available cash; record shortfall in warning |
+| Investment contribution exceeds available cash | Skip contribution entirely; growth still applies; no warning in Phase 1 (Phase 5 adds shortfall tracking) |
 | Simulation produces zero periods | `ValidationError` — end must be strictly after start |
 | All debts paid off before simulation ends | Debt applicator becomes a no-op for remaining periods |
 | Income load with future `start_date` | Load inactive until `period >= start_date` |
@@ -830,18 +849,18 @@ Implementation order within this phase:
 
 These must be resolved before Phase 1 implementation begins. Leaving them open causes mid-build schema changes.
 
-| # | Question | Stakes | Proposed Default |
+| # | Question | Stakes | Resolution |
 |---|---|---|---|
-| OQ-1 | Is income tax applied monthly or annually? | Affects every monthly cash flow | Monthly (withholding model) |
-| OQ-2 | What happens when cash goes negative? | Core behavior decision | Clamp to 0 + warning; continue |
-| OQ-3 | Does employer match apply to gross or net income? | Affects every investment balance | Gross |
-| OQ-4 | Are returns compounded monthly or annually? | Affects all investment balances | Monthly: `(1 + r/12)^1` per period |
-| OQ-5 | When a debt is paid off, what happens to the extra payment budget? | Core debt strategy behavior | Lost in Phase 1; cascade redirect in Phase 5 |
-| OQ-6 | Can an expense have a `start_date` and `end_date`? | Affects expense schema | Yes — add optional date range in Phase 1 schema |
-| OQ-7 | Is `starting_cash` in `settings.json` or implied from loads? | Affects initial state construction | `settings.json` — it's a simulation initial condition |
-| OQ-8 | In the final debt period, is a partial payment applied? | Affects final debt period accuracy | Yes: `payment = min(required, remaining_balance)` |
-| OQ-9 | Is the FIRE milestone in Phase 1 output or Phase 5? | Affects `TimelineResponse` schema | Phase 5 — keep response lean early |
-| OQ-10 | Should `income_this_period` be gross or net of tax? | Affects summary panel display | Report both: `gross_income_this_period` and `net_income_this_period` |
+| OQ-1 | Is income tax applied monthly or annually? | Affects every monthly cash flow | ✅ **Monthly** — `net = gross * (1 - income_tax_rate)` per period |
+| OQ-2 | What happens when cash goes negative? | Core behavior decision | Open — not explicitly handled in Phase 1; cash can go negative |
+| OQ-3 | Does employer match apply to gross or net income? | Affects every investment balance | Deferred — employer match removed from Phase 1 scope |
+| OQ-4 | Are returns compounded monthly or annually? | Affects all investment balances | ✅ **Monthly** — `balance * (annual_return / 12)` per period |
+| OQ-5 | When a debt is paid off, what happens to the extra payment budget? | Core debt strategy behavior | ✅ **Lost in Phase 1** — extra payment is per-load; cascade deferred to Phase 5 |
+| OQ-6 | Can an expense have a `start_date` and `end_date`? | Affects expense schema | ✅ **Yes** — all loads inherit `DateBoundLoad` with `start_date` + optional `end_date` |
+| OQ-7 | Is `starting_cash` in `settings.json` or implied from loads? | Affects initial state construction | ✅ **`settings.json`** — `starting_cash` field on `SettingsInput` |
+| OQ-8 | In the final debt period, is a partial payment applied? | Affects final debt period accuracy | ✅ **Yes** — `actual_deducted = min(total_payment, balance + interest)` |
+| OQ-9 | Is the FIRE milestone in Phase 1 output or Phase 5? | Affects `TimelineResponse` schema | ✅ **Phase 5** — not in Phase 1 response |
+| OQ-10 | Should `income_this_period` be gross or net of tax? | Affects summary panel display | Open — currently `state.income` accumulates gross; net derivable from gross + tax rate |
 
 ---
 
