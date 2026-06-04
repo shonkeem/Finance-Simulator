@@ -12,7 +12,7 @@ def build_initial_state(framing: FramingInput, loads: LoadsInput, settings: Sett
         date=framing.start_date,
         cash=settings.starting_cash,
         investments=initial_investments,
-        debt=initial_debt,
+        debts=initial_debt,
         income=initial_income,
         expenses=initial_expenses
     )
