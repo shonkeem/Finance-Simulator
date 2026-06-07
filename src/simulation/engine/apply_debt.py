@@ -1,8 +1,10 @@
 from simulation.models.inputs import DebtLoad, SettingsInput
-from simulation.models.state import SimulationState
-from dataclasses import replace
+from simulation.models.state import SimulationState, evolve
 
-def apply_debt(state: SimulationState, load: DebtLoad, setting: SettingsInput) -> SimulationState:
+
+def apply_debt(
+    state: SimulationState, load: DebtLoad, setting: SettingsInput
+) -> SimulationState:
     # date gating
     if state.date < load.start_date or (load.end_date and state.date > load.end_date):
         return state
@@ -14,4 +16,4 @@ def apply_debt(state: SimulationState, load: DebtLoad, setting: SettingsInput) -
 
     new_debts = {**state.debts, load.name: new_balance}
     new_cash = state.cash - min(total_monthly, state.debts[load.name] + interest)
-    return replace(state, cash=new_cash, debts=new_debts)
+    return evolve(state, cash=new_cash, debts=new_debts)
