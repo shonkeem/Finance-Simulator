@@ -146,3 +146,21 @@
 - Define `SimulationStateResponse` and `TimelineResponse` Pydantic models in `api/models.py` — separate from input models
 - Write `tests/api/test_simulate_endpoint.py`: 200 + correct shape on valid input, 422 on invalid input
 ---
+
+## 2026-06-07
+### Done
+- Fixed three bugs in the simulation engine: `frozen=True` + dict field unhashability (added `hash=False`, introduced `evolve()` helper in `state.py`), `income`/`expenses` initial seeding at non-zero values in `build_initial_state.py` (now seeded at `0.0`), and duplicate-date entries in timeline caused by date advance happening after append in `core.py` (now advances before append)
+- Added `evolve()` to `state.py` and migrated all applicators (`apply_income`, `apply_expense`, `apply_debt`, `apply_investment`) and `core.py` from `dataclasses.replace()` to `evolve()`, ensuring dict fields are always deep-copied between states
+- Implemented `api/models.py` (`SimulationRequest`, `SimulationStateResponse`, `TimelineResponse`) and `api/main.py` (POST `/simulate` endpoint — thin orchestration only, no simulation logic)
+- Expanded test suite from 24 to 61 passing tests: added `end_date` gating, accumulation, period reset, and net_worth tests to all applicator test files; added date-sequencing and load-expiry integration tests to `test_core.py`; created `tests/simulation/test_inputs.py` with 15 Pydantic validation tests; expanded `tests/api/test_simulate_endpoint.py` with timeline length, date, and net_worth assertions
+
+### Status
+- Tests: 61 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 0 (working tree clean, 3 commits ahead of origin)
+
+### Next Session
+- Begin frontend visualization: create `frontend/src/components/TimelineChart.tsx` — presentational component accepting `timeline: SimulationStateResponse[]`, renders net_worth line chart; install `recharts` in `frontend/`
+- Wire `TimelineChart` into `App.tsx`: add form submission that calls `POST /simulate` and passes the response to the chart component
+- Add CORS middleware to `api/main.py` (`fastapi.middleware.cors.CORSMiddleware`) to allow the Vite dev server to call the API
+---

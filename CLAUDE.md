@@ -47,7 +47,7 @@ The simulation tracks these state variables at each timestep:
 
 ## Current Build State
 
-*Last updated: 2026-06-05*
+*Last updated: 2026-06-07*
 
 ### Exists now
 - Final directory structure in place: `api/`, `src/simulation/models/`, `src/simulation/engine/`, `frontend/`, `tests/simulation/`, `framing.json`, `loads.json`, `settings.json`
@@ -61,28 +61,32 @@ The simulation tracks these state variables at each timestep:
 - `loads.json` — filled with income, expenses, debts, investments
 - `settings.json` — filled with inflation, tax, debt strategy, starting cash
 - `src/simulation/models/inputs.py` — refactored: `DateBoundLoad(BaseModel)` base class added with shared `end_after_start` model validator; all four load models inherit from it; `DebtLoad.annual_rate` renamed to `annual_interest_rate`; `InvestmentLoad` simplified (`assumed_annual_return` → `annual_return`, employer match fields deferred/commented out)
-- `src/simulation/models/state.py` — `SimulationState` frozen dataclass with `net_worth` property; field renamed `debt` → `debts`; `net_worth` property fixed to use `self.debts`
-- `src/simulation/engine/build_initial_state.py` — complete and correct: investments/debts as `dict[str, float]` keyed by load name; fixed `debt=` → `debts=` kwarg
-- `src/simulation/engine/core.py` — complete: correct imports, `advance_one_month`, field names, `state.date` updated each loop via `dataclasses.replace`
-- `src/simulation/engine/apply_income.py` — implemented: date gating, compound annual growth, tax, accumulates into `state.income`, returns new state via `dataclasses.replace`
-- `src/simulation/engine/apply_expense.py` — implemented: inflation-linked scaling; uses `load.start_date` for elapsed time (no longer takes `start_date` as argument); accumulates into `state.expenses`
-- `src/simulation/engine/apply_debt.py` — implemented: date gating, monthly interest accrual (`balance * annual_interest_rate / 12`), total payment applied, balance floored at 0, updates `state.debts[load.name]` and `state.cash`
-- `src/simulation/engine/apply_investment.py` — implemented: date gating, monthly growth on pre-contribution balance, contribution deducted from cash (skipped silently if insufficient cash), updates `state.investments[load.name]`
-- `tests/simulation/test_apply_income.py` — 4 passing tests
-- `tests/simulation/test_apply_expense.py` — 2 passing tests
-- `tests/simulation/test_apply_debt.py` — 4 passing tests: normal payment, balance floored at zero, extra payment, inactive load
-- `tests/simulation/test_apply_investment.py` — 4 passing tests: normal growth+contribution, zero balance, cash shortage skip, inactive load
-- `tests/simulation/test_core.py` — 6 passing integration tests: timeline length (1-month, 2-month), income+expense accumulation, debt paydown, investment growth, determinism
+- `src/simulation/models/state.py` — `SimulationState` frozen dataclass with `net_worth` property; `hash=False` on dict fields to prevent unhashable type error; `evolve()` helper added to safely copy state with dict field protection
+- `src/simulation/engine/build_initial_state.py` — complete and correct: investments/debts as `dict[str, float]` keyed by load name; `income` and `expenses` seeded at `0.0`
+- `src/simulation/engine/core.py` — complete: date advance happens before append (fixes duplicate-date bug); `income`/`expenses` reset to `0.0` at top of each loop iteration; uses `evolve()` throughout
+- `src/simulation/engine/apply_income.py` — implemented: date gating, compound annual growth, tax, accumulates into `state.income`, returns new state via `evolve()`
+- `src/simulation/engine/apply_expense.py` — implemented: inflation-linked scaling; uses `load.start_date` for elapsed time; accumulates into `state.expenses`; uses `evolve()`
+- `src/simulation/engine/apply_debt.py` — implemented: date gating, monthly interest accrual, total payment applied, balance floored at 0; uses `evolve()`
+- `src/simulation/engine/apply_investment.py` — implemented: date gating, monthly growth on pre-contribution balance, contribution skipped silently if insufficient cash; uses `evolve()`
+- `api/models.py` — `SimulationRequest`, `SimulationStateResponse`, `TimelineResponse` Pydantic models
+- `api/main.py` — POST `/simulate` endpoint: accepts `SimulationRequest`, calls `run_simulation`, returns `TimelineResponse`; no simulation logic in route
+- `api/__init__.py` — empty, makes `api/` importable as a package
+- `tests/simulation/test_apply_income.py` — 6 passing tests
+- `tests/simulation/test_apply_expense.py` — 6 passing tests
+- `tests/simulation/test_apply_debt.py` — 6 passing tests
+- `tests/simulation/test_apply_investment.py` — 6 passing tests
+- `tests/simulation/test_core.py` — 12 passing integration tests: length, dates sequential, initial state, period reset, end_date gating, net_worth correctness, determinism
+- `tests/simulation/test_inputs.py` — 15 passing validation tests: all Pydantic validators across FramingInput, load types, LoadsInput uniqueness, SettingsInput
+- `tests/api/test_simulate_endpoint.py` — 8 passing tests: status codes, response shape, timeline length, sequential dates, net_worth
 - `conftest.py` — at project root, adds `src/` to `sys.path` for pytest imports
 - `pytest 9.0.3` — installed in `.venv`
 
 ### Does NOT exist yet
-- `api/main.py` content (empty)
 - Frontend visualization components
 - `ruff` not installed in `.venv/`
 
 ### Next step
-Implement `api/main.py`: define a single POST endpoint `/simulate` that accepts `FramingInput`, `LoadsInput`, and `SettingsInput` as the request body, calls `run_simulation`, and returns the timeline as a list of `SimulationState`-shaped response objects. Define a `TimelineResponse` Pydantic model for the response. No simulation logic in the route.
+Begin frontend visualization: create `frontend/src/components/TimelineChart.tsx` — a presentational component that accepts `timeline: SimulationStateResponse[]` as a prop and renders a line chart of `net_worth` over time using a charting library (suggest `recharts`, already common in React ecosystems). Wire it into `App.tsx` to call `POST /simulate` and display results.
 
 ## Do Not Touch List
 
