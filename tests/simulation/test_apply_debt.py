@@ -68,3 +68,32 @@ def test_apply_debt_inactive_load_returns_unchanged_state():
     )
     new_state = apply_debt(state=prev_state, load=future_loan, setting=settings)
     assert new_state is prev_state
+
+
+def test_apply_debt_end_date_gating_returns_unchanged_state():
+    expired_loan = DebtLoad(
+        name="student_loan",
+        current_balance=1000.0,
+        annual_interest_rate=0.12,
+        minimum_monthly_payment=100.0,
+        extra_monthly_payment=0.0,
+        start_date=date(2024, 1, 1),
+        end_date=date(2024, 6, 1),
+    )
+    # prev_state.date = 2025-01-01, which is after end_date
+    new_state = apply_debt(state=prev_state, load=expired_loan, setting=settings)
+    assert new_state is prev_state
+
+
+def test_apply_debt_zero_interest_rate():
+    zero_interest_loan = DebtLoad(
+        name="student_loan",
+        current_balance=1000.0,
+        annual_interest_rate=0.0,
+        minimum_monthly_payment=100.0,
+        extra_monthly_payment=0.0,
+        start_date=date(2024, 1, 1),
+    )
+    new_state = apply_debt(state=prev_state, load=zero_interest_loan, setting=settings)
+    assert new_state.debts["student_loan"] == pytest.approx(900.0)
+    assert new_state.cash == pytest.approx(4900.0)

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from src.simulation.models.inputs import FramingInput, LoadsInput, SettingsInput
+from simulation.models.inputs import FramingInput, LoadsInput, SettingsInput
 from datetime import date
 
 

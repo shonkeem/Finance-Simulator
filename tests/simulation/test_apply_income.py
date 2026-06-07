@@ -29,3 +29,23 @@ def test_growth_applied():
     new_state = apply_income(prev_state, growth_load, tax_free_settings)
     assert new_state.cash == pytest.approx(110)
     assert new_state.income == pytest.approx(110)
+
+
+def test_end_date_gating_returns_unchanged_state():
+    expired_load = IncomeLoad(
+        name="salary",
+        monthly_gross=100,
+        annual_growth_rate=0,
+        start_date=date(2023, 1, 1),
+        end_date=date(2023, 12, 1),
+    )
+    # prev_state.date = 2024-01-01, which is after end_date
+    new_state = apply_income(prev_state, expired_load, tax_free_settings)
+    assert new_state is prev_state
+
+
+def test_accumulates_onto_existing_income():
+    # income already accumulated from a previous load this period
+    partial_state = SimulationState(date=date(2024, 1, 1), income=200, expenses=0)
+    new_state = apply_income(partial_state, same_day_load, tax_free_settings)
+    assert new_state.income == pytest.approx(300)  # 200 carried + 100 new

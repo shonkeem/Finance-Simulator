@@ -32,10 +32,10 @@ def run_simulation(
         for load in loads.investments:
             state = apply_investment(state, load, settings)
 
-        timeline.append(state)
-
         if framing.time_step == TimeStep.monthly:
             current_date = advance_one_month(current_date)
             state = evolve(state, date=current_date)
+
+        timeline.append(state)
 
     return timeline
