@@ -130,3 +130,19 @@
 - Define `SimulationStateResponse` and `TimelineResponse` Pydantic models in `api/models.py` — separate from input models
 - Write `tests/api/test_simulate_endpoint.py`: 200 + correct shape on valid input, 422 on invalid input
 ---
+
+## 2026-06-05
+### Done
+- No code changes — session was a startup/shutdown audit only
+- Confirmed baseline: 20 tests passing, TypeScript build clean, working tree clean
+
+### Status
+- Tests: 20 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 0 (working tree clean)
+
+### Next Session
+- Implement `api/main.py`: single POST `/simulate` endpoint accepting `FramingInput`, `LoadsInput`, `SettingsInput` in the request body; calls `run_simulation`; returns timeline as list of response objects
+- Define `SimulationStateResponse` and `TimelineResponse` Pydantic models in `api/models.py` — separate from input models
+- Write `tests/api/test_simulate_endpoint.py`: 200 + correct shape on valid input, 422 on invalid input
+---
