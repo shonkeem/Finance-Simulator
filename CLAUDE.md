@@ -45,6 +45,19 @@ The simulation tracks these state variables at each timestep:
 - State is immutable between steps — never mutate in place
 - The engine must be deterministic given identical inputs
 
+## Guidance Style
+
+When asked for step-by-step instructions on how to implement something, follow this format for every step:
+
+- **File** — exact file path to open or create
+- **Location** — where in that file the change goes (after which line, inside which function, new section, etc.)
+- **What it must do** — the behavior or contract required (inputs, outputs, side effects, constraints) — not how to write it
+- **How it connects** — one sentence explaining how this piece fits into the layer above or below it (data flow, caller, dependency direction)
+
+Do NOT include actual code, exact method signatures, library API calls, or syntax. The developer must write all of that.
+
+When a task spans multiple files or layers, number the steps in dependency order — the developer should be able to complete them sequentially without backtracking.
+
 ## Current Build State
 
 *Last updated: 2026-06-07*
@@ -69,7 +82,7 @@ The simulation tracks these state variables at each timestep:
 - `src/simulation/engine/apply_debt.py` — implemented: date gating, monthly interest accrual, total payment applied, balance floored at 0; uses `evolve()`
 - `src/simulation/engine/apply_investment.py` — implemented: date gating, monthly growth on pre-contribution balance, contribution skipped silently if insufficient cash; uses `evolve()`
 - `api/models.py` — `SimulationRequest`, `SimulationStateResponse`, `TimelineResponse` Pydantic models
-- `api/main.py` — POST `/simulate` endpoint: accepts `SimulationRequest`, calls `run_simulation`, returns `TimelineResponse`; no simulation logic in route
+- `api/main.py` — POST `/simulate` endpoint with CORS middleware: allows `http://localhost:5173`, `Content-Type` header, POST method; no simulation logic in route
 - `api/__init__.py` — empty, makes `api/` importable as a package
 - `tests/simulation/test_apply_income.py` — 6 passing tests
 - `tests/simulation/test_apply_expense.py` — 6 passing tests
@@ -80,13 +93,17 @@ The simulation tracks these state variables at each timestep:
 - `tests/api/test_simulate_endpoint.py` — 8 passing tests: status codes, response shape, timeline length, sequential dates, net_worth
 - `conftest.py` — at project root, adds `src/` to `sys.path` for pytest imports
 - `pytest 9.0.3` — installed in `.venv`
+- `recharts ^3.8.1` — installed in `frontend/`
+- `frontend/src/components/TimelineChart.tsx` — created (in progress, not yet committed)
+- `CLAUDE.md` — added `## Guidance Style` section encoding preferred step-by-step instruction format
 
 ### Does NOT exist yet
-- Frontend visualization components
+- `TimelineChart.tsx` not yet wired into `App.tsx`
+- `App.tsx` fetch body and result handler not yet updated to match `SimulationRequest` / `TimelineResponse` shape
 - `ruff` not installed in `.venv/`
 
 ### Next step
-Begin frontend visualization: create `frontend/src/components/TimelineChart.tsx` — a presentational component that accepts `timeline: SimulationStateResponse[]` as a prop and renders a line chart of `net_worth` over time using a charting library (suggest `recharts`, already common in React ecosystems). Wire it into `App.tsx` to call `POST /simulate` and display results.
+Rework `frontend/src/App.tsx`: replace placeholder form with a single "Run Simulation" button, fix the fetch body to match `SimulationRequest` (inline the three JSON file contents as a JS object), fix the result handler to read `result.timeline`, add `timeline` state typed as `SimulationStateResponse[] | null`, and conditionally render `<TimelineChart timeline={timeline} />` when non-null.
 
 ## Do Not Touch List
 

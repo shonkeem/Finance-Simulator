@@ -164,3 +164,21 @@
 - Wire `TimelineChart` into `App.tsx`: add form submission that calls `POST /simulate` and passes the response to the chart component
 - Add CORS middleware to `api/main.py` (`fastapi.middleware.cors.CORSMiddleware`) to allow the Vite dev server to call the API
 ---
+
+## 2026-06-07 (addendum — frontend setup)
+### Done
+- Added `## Guidance Style` section to `CLAUDE.md` — encodes preferred instruction format: file path, location, contract, layer connection per step; no code or signatures
+- Added CORS middleware to `api/main.py`: correct origin (`http://localhost:5173`), `allow_headers=["Content-Type"]`, `allow_methods=["POST"]`; caught and fixed two bugs (wrong port, `allow_headers` had method name instead of header name)
+- Installed `recharts ^3.8.1` in `frontend/` (`package.json` + `package-lock.json` updated); confirmed recharts 3.x ships its own types — no separate `@types` package needed
+- Created `frontend/src/components/TimelineChart.tsx` (in progress, not yet committed)
+
+### Status
+- Tests: 61 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 4 modified (CLAUDE.md, api/main.py, frontend/package.json, frontend/package-lock.json), 1 untracked directory (frontend/src/components/)
+
+### Next Session
+- Complete `frontend/src/components/TimelineChart.tsx` if not finished: accepts `timeline: SimulationStateResponse[]` prop, renders recharts `LineChart` with `date` on X axis and `net_worth` on Y axis — no state, no fetching
+- Rework `frontend/src/App.tsx`: replace placeholder form with a single "Run Simulation" button; fix fetch body to match `SimulationRequest` shape (inline the three JSON files as a JS object); fix result handler to read `result.timeline` instead of `result.payload`
+- Add `timeline` state to `App.tsx` typed as `SimulationStateResponse[] | null`; conditionally render `<TimelineChart timeline={timeline} />` when non-null
+---
