@@ -1,63 +1,99 @@
-import { useState } from 'react';
-import './App.css'
-
-interface MyFormProps {
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-}
-
-function MyForm({ onSubmit }: MyFormProps) {
-  return (
-    <form onSubmit={onSubmit}>
-      <label>Name:</label><br />
-      <input name='name' type='text'/><br />
-      <label>Age:</label><br />
-      <input name='age' type='number'/><br />
-      <label>Income:</label><br />
-      <input name='income' type='number'/><br />
-      <label>Expenses:</label><br />
-      <input name='expenses' type='number'/><br />
-      <button type='submit'>Simulate</button>
-    </form>
-  )
-}
+import { useState } from "react";
+import type { SimulationStateResponse } from "./types";
+import TimelineChart from "./components/TimelineChart";
 
 function App() {
-  const [message, setMessage] = useState('default');
+  const [timeline, setTimeline] = useState<SimulationStateResponse[] | null>(
+    null,
+  );
 
-  const submitData = async (submitEvent: React.FormEvent<HTMLFormElement>) => {
-    submitEvent.preventDefault()
-
-    const data = new FormData(submitEvent.currentTarget);
-    const values = Object.fromEntries(data);
-    console.log(values);
-
+  const runSimulation = async () => {
     try {
       const response = await fetch("http://127.0.0.1:8000/simulate", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          framing: {
+            label: "My base case scenario",
+            start_date: "2025-01-01",
+            end_date: "2034-12-01",
+            time_step: "monthly",
+          },
+          loads: {
+            income: [
+              {
+                name: "primary_salary",
+                monthly_gross: 7500.00,
+                annual_growth_rate: 0.03,
+                start_date: "2025-01-01",
+                end_date: null,
+              },
+            ],
+            expenses: [
+              {
+                name: "rent",
+                monthly_amount: 1800.00,
+                category: "housing",
+                inflation_linked: true,
+                start_date: "2025-01-01",
+                end_date: null,
+              },
+              {
+                name: "groceries",
+                monthly_amount: 400.00,
+                category: "food",
+                inflation_linked: true,
+                start_date: "2025-01-01",
+                end_date: null,
+              },
+            ],
+            debts: [
+              {
+                name: "student_loans",
+                current_balance: 28000.00,
+                annual_interest_rate: 0.055,
+                minimum_monthly_payment: 295.00,
+                extra_monthly_payment: 200.00,
+                start_date: "2025-01-01",
+                end_date: null,
+              },
+            ],
+            investments: [
+              {
+                name: "401k",
+                account_type: "401k",
+                current_balance: 15000.00,
+                monthly_contribution: 500.00,
+                annual_return: 0.07,
+                start_date: "2025-01-01",
+                end_date: null,
+              },
+            ],
+          },
+          settings: {
+            inflation_rate: 0.03,
+            income_tax_rate: 0.22,
+            apply_income_tax: true,
+            apply_inflation_to_expenses: true,
+            starting_cash: 5000.00,
+          },
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error("Network response was no ok");
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const result = await response.json();
-      console.log(result.payload.income - result.payload.expenses);
-      setMessage('Success! Data posted: ' + result.payload);
+      setTimeline(result.timeline);
     } catch (error) {
-      setMessage('Error: ' + (error instanceof Error ? error.message : String(error)));
+      console.log(error);
     }
-  }
-
+  };
   return (
     <>
-      <MyForm onSubmit={submitData} />
-      <p>{message}</p>
+      <button onClick={runSimulation}>Run Simulation</button>
+      {timeline !== null && <TimelineChart timeline={timeline} />}
     </>
-  )
+  );
 }
 
-export default App
+export default App;
