@@ -182,3 +182,22 @@
 - Rework `frontend/src/App.tsx`: replace placeholder form with a single "Run Simulation" button; fix fetch body to match `SimulationRequest` shape (inline the three JSON files as a JS object); fix result handler to read `result.timeline` instead of `result.payload`
 - Add `timeline` state to `App.tsx` typed as `SimulationStateResponse[] | null`; conditionally render `<TimelineChart timeline={timeline} />` when non-null
 ---
+
+## 2026-06-09
+### Done
+- Created `frontend/src/types.ts` — `SimulationStateResponse` TypeScript interface matching `api/models.py` response shape; shared between `App.tsx` and `TimelineChart.tsx`
+- Built `frontend/src/components/TimelineChart.tsx` — recharts `LineChart` with `date` on X axis and `net_worth` on Y axis; pure presentational, no state or fetching
+- Reworked `frontend/src/App.tsx` — replaced placeholder `MyForm` with a "Run Simulation" button; fetch body matches `SimulationRequest` with corrected field names (`annual_interest_rate`, `annual_return`, `start_date` on all loads); result handler reads `result.timeline`; conditionally renders `<TimelineChart />`
+- Fixed `ModuleNotFoundError` for uvicorn — `src/` not on Python path; resolved by running `PYTHONPATH=src uvicorn api.main:app --reload`
+- End-to-end verified: browser at `http://localhost:5173` runs simulation and renders net worth chart
+
+### Status
+- Tests: 61 passed, 0 failed, 0 skipped
+- Build: TypeScript — clean (no errors). Ruff — SKIPPED (not installed)
+- Uncommitted files: 0 (working tree clean, 1 commit ahead of origin)
+
+### Next Session
+- Fix `loads.json` at project root: rename `annual_rate` → `annual_interest_rate` (debt), `assumed_annual_return` → `annual_return` (investment), add `start_date`/`end_date` to each expense/debt/investment load, remove employer match fields from investment, remove `debt_payoff_strategy` from `settings.json` — file is currently stale vs. the Pydantic models
+- Add `frontend/src/utils/formatters.ts` with a currency formatter function; wire it into `TimelineChart.tsx` via `YAxis tickFormatter` and `Tooltip formatter` so net_worth displays as `$` values
+- Make `TimelineChart.tsx` responsive: replace fixed `width={800} height={400}` with recharts `ResponsiveContainer`
+---

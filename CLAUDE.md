@@ -60,18 +60,17 @@ When a task spans multiple files or layers, number the steps in dependency order
 
 ## Current Build State
 
-*Last updated: 2026-06-07*
+*Last updated: 2026-06-09*
 
 ### Exists now
 - Final directory structure in place: `api/`, `src/simulation/models/`, `src/simulation/engine/`, `frontend/`, `tests/simulation/`, `framing.json`, `loads.json`, `settings.json`
-- Frontend form (`frontend/src/App.tsx`) — TypeScript errors resolved, `MyForm` extracted to module level, correct event types and error narrowing. `node_modules` installed.
 - `.gitignore` updated — `.venv/` replacing old `my_venv/` entry
 - `backend/` deleted — venv recreated at project root as `.venv/`
 - `/shutdown` skill — `.claude/skills/shutdown/SKILL.md` working and verified
 - `/startup` skill — `.claude/skills/startup/SKILL.md` created and committed: reads session log, checks git/tests/build, prints consolidated session brief
 - `docs/PRD.md` — v0.3: updated to match implemented behavior — field renames, formula corrections, ADR-006 (investment growth order), Phase 1 completion status, resolved Open Questions
 - `framing.json` — filled with 10-year scenario (2025-01-01 → 2034-12-01, monthly)
-- `loads.json` — filled with income, expenses, debts, investments
+- `loads.json` — **stale field names**: `annual_rate` should be `annual_interest_rate`, `assumed_annual_return` should be `annual_return`, expenses/debts/investments missing `start_date`, employer match fields not in model, `settings.json` has `debt_payoff_strategy` which is not in `SettingsInput`
 - `settings.json` — filled with inflation, tax, debt strategy, starting cash
 - `src/simulation/models/inputs.py` — refactored: `DateBoundLoad(BaseModel)` base class added with shared `end_after_start` model validator; all four load models inherit from it; `DebtLoad.annual_rate` renamed to `annual_interest_rate`; `InvestmentLoad` simplified (`assumed_annual_return` → `annual_return`, employer match fields deferred/commented out)
 - `src/simulation/models/state.py` — `SimulationState` frozen dataclass with `net_worth` property; `hash=False` on dict fields to prevent unhashable type error; `evolve()` helper added to safely copy state with dict field protection
@@ -94,16 +93,20 @@ When a task spans multiple files or layers, number the steps in dependency order
 - `conftest.py` — at project root, adds `src/` to `sys.path` for pytest imports
 - `pytest 9.0.3` — installed in `.venv`
 - `recharts ^3.8.1` — installed in `frontend/`
-- `frontend/src/components/TimelineChart.tsx` — created (in progress, not yet committed)
+- `frontend/src/types.ts` — `SimulationStateResponse` TypeScript interface matching `api/models.py` response shape
+- `frontend/src/components/TimelineChart.tsx` — recharts `LineChart`: `date` on X axis, `net_worth` on Y axis; committed and wired
+- `frontend/src/App.tsx` — fully reworked: "Run Simulation" button, fetch body matches `SimulationRequest` with corrected field names, `timeline` state typed as `SimulationStateResponse[] | null`, conditionally renders `<TimelineChart />`
 - `CLAUDE.md` — added `## Guidance Style` section encoding preferred step-by-step instruction format
+- **End-to-end working**: browser can run simulation and display net worth chart; backend started with `PYTHONPATH=src uvicorn api.main:app --reload`
 
 ### Does NOT exist yet
-- `TimelineChart.tsx` not yet wired into `App.tsx`
-- `App.tsx` fetch body and result handler not yet updated to match `SimulationRequest` / `TimelineResponse` shape
 - `ruff` not installed in `.venv/`
+- `loads.json` not yet synced to current Pydantic model field names (stale — see note above)
+- `frontend/src/utils/formatters.ts` — currency formatter for Y-axis and Tooltip display
+- `TimelineChart.tsx` uses fixed `width`/`height` pixels — not yet responsive (`ResponsiveContainer`)
 
 ### Next step
-Rework `frontend/src/App.tsx`: replace placeholder form with a single "Run Simulation" button, fix the fetch body to match `SimulationRequest` (inline the three JSON file contents as a JS object), fix the result handler to read `result.timeline`, add `timeline` state typed as `SimulationStateResponse[] | null`, and conditionally render `<TimelineChart timeline={timeline} />` when non-null.
+Fix `loads.json` at project root to match current Pydantic model field names: rename `annual_rate` → `annual_interest_rate` in the debt entry, rename `assumed_annual_return` → `annual_return` in the investment entry, add `start_date: "2025-01-01"` and `end_date: null` to each expense/debt/investment load, remove `employer_match_rate` and `employer_match_cap_pct_salary` from the investment entry, and remove `debt_payoff_strategy` from `settings.json`.
 
 ## Do Not Touch List
 
